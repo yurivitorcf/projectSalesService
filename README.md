@@ -1,58 +1,50 @@
-# Salesforce DX Project
+# Sistema de Cobrança e Liberação de Pedido
+ 
+Projeto de portfólio em Salesforce Sales Cloud + Service Cloud que automatiza um problema comum em empresas B2B com análise de crédito: quando um cliente atrasa um boleto, o pedido de venda fica bloqueado até a dívida ser regularizada. Fiz isso pra praticar Apex assíncrono (Batch e Queueable), LWC e integração REST resolvendo um cenário de negócio de verdade, em vez de um exemplo isolado.
 
-Salesforce DX is a development approach that brings source-driven development, team collaboration, and continuous integration to the Salesforce Platform. Instead of working directly in an org through a web browser, you work with metadata as source files in a local DX project, track changes in version control, and deploy through automated processes.
+## O problema
+ 
+Sem automação, esse processo costuma ser manual: alguém do financeiro precisa checar boletos vencidos, avisar o time de vendas, e depois liberar o pedido na mão quando o cliente paga. Isso atrasa a cobrança e, às vezes, o pedido acaba liberado sem a dívida estar realmente quitada.
 
-This project template gets you started with the tools and structure you need to build Salesforce applications using source control, scratch orgs, and the Salesforce CLI.
+### FLUXO DE FUNCIONAMENTO
 
-## Prerequisites
+```
+1. Parcela vence e não é paga (tempo limite definido em 3 dias)
 
-Before you start, make sure you have:
+2. Batch Apex identifica a se está inadimplente
 
-- **Salesforce CLI** - Download from [developer.salesforce.com/tools/salesforcecli](https://developer.salesforce.com/tools/salesforcecli). See [Install Salesforce CLI](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_install_cli.htm) for details.
-- **VS Code with Salesforce Extension Pack** - See [Installation Instructions](https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/install.html) for details. Includes the Agentforce Vibes extension.
-- **A development org** - Sign up for a free Developer Edition org [here](https://developer.salesforce.com/signup).
-- **Dev Hub enabled** (optional, required to create scratch orgs) - You can enable Dev Hub in your development org under Setup > Dev Hub.  See [Provide Developers Access to Salesforce DX Tools](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_setup_dx_tools.htm).
+3. Conta é marcada como inadimplente e um Case de cobrança é criado
 
-## Project Structure
+4. O Operador financeiro negocia a dívida através do LWC no Case
 
-Your DX project follows this structure:
+5. Após parcelas quitadas , a Conta é reativada , o Pedido liberado e o Case fechado
 
-- **`force-app/main/default/`** - Your metadata source files live in this default package directory. You can configure additional package directories in the `sfdx-project.json` file.
-- **`config/`** - Scratch org definitions and project settings
-- **`scripts/`** - Automation scripts for common tasks
-- **`sfdx-project.json`** - Project manifest that defines package directories, namespace, API version, and other project-level settings
+6. Por fim o Queueable Apex vai notificar o ERP através de um callout HTTP assíncrono
+```
 
-See [Salesforce DX Project Configuration](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_ws_config.htm).
+## Por que fiz certas escolhas
+ 
+**Batch Apex pra identificar inadimplência em vez de Trigger.** \
+A regra depende de tempo, não existe evento de gravação pra isso, então não tem como ser trigger. 
+ 
+**Queueable realizando callout ao ERP.** \
+A estrutura do Queueable aceita objetos mais complexos no construtor e dá pra encadear outro job depois caso necessário.
+ 
+**Case só fecha e Order só libera quando não sobra parcela em aberto.** \
+Na primeira versão eu tinha deixado o Case fechando assim que qualquer parcela selecionada fosse quitada, mesmo com dívida sobrando. Esse problema só percebi testando manualmente. Corrigi pra contar quantas parcelas ainda estão em aberto antes de liberar e tornar o case fechado.
 
-## Get Started
+ 
+## Capturas de tela
 
-Ready to start developing? The [Get Started with Salesforce DX](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_get_started_dx.htm) guide walks you through your first project, from creating a scratch org to creating a simple Apex class or LWC to deploying your code to a sandbox.
+<img width="1918" height="788" alt="imagem do case com uma parcela" src="https://github.com/user-attachments/assets/bfd20151-a0d1-4519-82b3-8f3d8338701b" />
 
-## Common Salesforce CLI Commands
 
-Here are common CLI commands that you'll use the most:
+<img width="1502" height="685" alt="parcela quitada com mensagem de sucesso" src="https://github.com/user-attachments/assets/516bddb5-0a3d-4240-b7a9-c02837444e82" />
 
-- `sf org login web`: Authorize an org
-- `sf org open`: Open your org in a browser
-- `sf org create scratch`: Create a scratch org
-- `sf project deploy start`: Deploy metadata to your org
-- `sf project retrieve start`: Retrieve metadata from your org
-- `sf template generate <artifact>`: Scaffold new components, such as Apex classes and triggers, LWC components, Lightning apps, and more
-- `sf apex <command>`: Run Apex tests, run anonymous Apex blocks, and view logs
-- `sf data <command>`: Work with test data
-- `sf alias <command>`: Manage org aliases
-- `sf config <command>`: Configure CLI settings
 
-## Use Agentforce Vibes to Build Lightning Apps
+<img width="1913" height="605" alt="case closed apos quitar" src="https://github.com/user-attachments/assets/a7c8e5ef-ef4d-4550-bc3b-c7f357ae5a6e" />
 
-Transform your ideas into custom Lightning apps that extend CRM workflows directly in Lightning Experience. Through natural conversations with Agentforce Vibes, implement custom objects and fields, complex business logic, and dynamic UI components. See [Build a Lightning App Using Agentforce Vibes](https://developer.salesforce.com/docs/platform/einstein-for-devs/guide/lexapp-overview.html).
-
-## Additional Resources
-
-- [Agentforce Vibes Developer Guide](https://developer.salesforce.com/docs/platform/einstein-for-devs/guide/einstein-overview.html)
-- [Salesforce CLI Installation Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_intro.htm)
-- [Salesforce DX Developer Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/)
-- [Salesforce CLI Command Reference](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/)
-- [Salesforce CLI Plugin Development Guide](https://developer.salesforce.com/docs/platform/salesforce-cli-plugin/guide/conceptual-overview.html)
-- [Salesforce VS Code Extensions Documentation](https://developer.salesforce.com/tools/vscode/)
-
+## Autor
+ 
+Yuri Ferreira — Salesforce Developer Junior\
+[LinkedIn](https://linkedin.com/in/yuri-ferreira-ab154534b) · [Trailhead](https://salesforce.com/trailblazer/yurivitorcf)
