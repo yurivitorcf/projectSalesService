@@ -14,7 +14,7 @@ public with sharing class BatchIdentificarInadimplentes implements Database.Batc
         Set<Id> accountIds = new Set<Id>();
 
         //loop para popular o accountIds criado
-        for(Parcela__c parcela in scope){
+        for(Parcela__c parcela : scope){
             accountIds.add(parcela.Account__c);
         }
         //validação para encerrar o processo caso não haja nenhuma conta
@@ -27,7 +27,7 @@ public with sharing class BatchIdentificarInadimplentes implements Database.Batc
         List<Account> contasParaAtualizar = [SELECT Id, Status__c FROM Account WHERE Id IN :accountIds AND Status__c != 'Inadimplente'];
 
         //Conversão do status para inadimplente
-        for(Account conta in contasParaAtualizar){
+        for(Account conta : contasParaAtualizar){
             conta.Status__c = 'Inadimplente';
         }
 
