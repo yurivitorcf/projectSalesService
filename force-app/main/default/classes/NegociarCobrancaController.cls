@@ -37,20 +37,25 @@ public with sharing class NegociarCobrancaController {
         }
         update parcelas;
 
-        //depois de quitado, altera o status da conta para ativo
-        Account conta = new Account(Id = c.AccountId, Status__c = 'Ativo');
-        update conta;
+        //verificar se ainda há parcelas em aberto para não fechar o case com parcelas sem quitar
+        Integer parcelasAbertas = [ SELECT COUNT() FROM Parcela__c WHERE Account__c = :c.AccountId AND Status__c != 'Pago'];
 
-        //busca os pedidos que foram bloqueados relacionados à conta
-        List<Order> pedidos = [SELECT Id, Status__c FROM Order WHERE AccountId = :c.AccountId AND Status__c = 'Bloqueado'];
+        if(parcelasAbertas == 0){
+            //depois de quitado, altera o status da conta para ativo
+            Account conta = new Account(Id = c.AccountId, Status__c = 'Ativo');
+            update conta;
 
-        //libera os pedidos novamente
-        for(Order pedido : pedidos){
-            pedido.Status__c = 'Liberado';         
-        }
-        update pedidos;
+            //busca os pedidos que foram bloqueados relacionados à conta
+            List<Order> pedidos = [SELECT Id, Status__c FROM Order WHERE AccountId = :c.AccountId AND Status__c = 'Bloqueado'];
 
-        //fecha o Case de cobrança após quitado
-        update new Case(Id = caseId, Status = 'Closed');
+            //libera os pedidos novamente
+            for(Order pedido : pedidos){
+                pedido.Status__c = 'Liberado';         
+            }
+            update pedidos;
+
+            //fecha o Case de cobrança após quitado
+            update new Case(Id = caseId, Status = 'Closed');
+        }       
     }
 }
